@@ -92,8 +92,9 @@ with open(tree_points_path) as tree_points_file:
         cuts.add_tree(x, y, weight)
 
 landings.active_change_callbacks.append(cuts.update_landing_points)
-landings.inactive_change_callbacks.append(cuts.set_feasible_cuts)
-landings.update_inactive_landings_kdtree()
+print(time.time())
+cuts.set_feasible_cuts([landing.point for landing in landings.inactive_landings])
+print(time.time())
 
 #initial_landings.add_landing(Landing((1389150.86068, 1137820.3201)))
 #initial_landings.add_landing(Landing((1393250.01155, 1138337.5164)))

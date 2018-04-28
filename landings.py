@@ -22,8 +22,8 @@ class Landings():
         ]
         
         self.forward_probabilities = [
-            0.1,
-            0.03
+            0.05,
+            0.02
         ]
         
         self.reverse_map = {
@@ -34,23 +34,15 @@ class Landings():
     def add_point(self, x, y):
         self.inactive_landings.append(Landing((x, y)))
 
-    def update_active_landings_kdtree(self):
-        active_points_kdtree = KDTree([landing.point for landing in self.active_landings])
-
+    def update_active_landings(self):
         for active_change_callback in self.active_change_callbacks:
-            active_change_callback(active_points_kdtree)
-
-    def update_inactive_landings_kdtree(self):
-        inactive_points_kdtree = KDTree([landing.point for landing in self.inactive_landings])
-
-        for inactive_chage_callback in self.inactive_change_callbacks:
-            inactive_chage_callback(inactive_points_kdtree)
+            active_change_callback([landing.point for landing in self.active_landings])
 
     def add_landing(self, landing):
         self.active_landings.append(landing)
         self.inactive_landings.remove(landing)
 
-        self.update_active_landings_kdtree()
+        self.update_active_landings()
         
     def add_random_landing(self):
         choice = random.choice(self.inactive_landings)
@@ -62,7 +54,7 @@ class Landings():
         self.active_landings.remove(landing)
         self.inactive_landings.append(landing)
 
-        self.update_active_landings_kdtree()
+        self.update_active_landings()
     
     def remove_random_landing(self):
         if len(self.active_landings) == 1:
