@@ -11,15 +11,8 @@ from scipy.spatial import KDTree
 from cut import Cut
 
 class Cuts():
-    def __init__(self, top_left, cut_width, cut_height):
-        self.top_left = top_left
-
-        self.cut_width = cut_width
-        self.cut_height = cut_height
-
-        self.initial_cuts = {}
-
-        self.inactive_cuts = set()
+    def __init__(self, initial_cuts):
+        self.inactive_cuts = initial_cuts
         self.active_cuts = set()
         
         self.active_landing_points = []
@@ -30,8 +23,8 @@ class Cuts():
         ]
         
         self.forward_probabilities = [
-           0.8,
-           0.4
+           1.0,
+           0.5
         ]
         
         self.reverse_map = {
@@ -39,32 +32,24 @@ class Cuts():
             self.remove_random_cut: self.add_cut
         }
 
-    def add_tree(self, x, y, weight):
-        normalized_x = x - self.top_left[0]
-        normalized_y = y - self.top_left[1]
+        self.max_iterations = 100000
 
-        cut_x_center = self.top_left[0] + (math.floor(normalized_x / self.cut_width) * self.cut_width + self.cut_width / 2)
-        cut_y_center = self.top_left[1] + (math.floor(normalized_y / self.cut_height) * self.cut_height + self.cut_height / 2)
+        self.starting_forward_probabilities = [
+            1.0,
+            0.5
+        ]
 
-        cut_center = (cut_x_center, cut_y_center)
+        self.ending_forward_probabilites = [
+            0.5,
+            1.0
+        ]
 
-        if cut_center not in self.initial_cuts:
-            self.initial_cuts[cut_center] = Cut(cut_center)
-    
-        self.initial_cuts[cut_center].add_tree(x, y, weight)
+    def step(self):
+        for i in range(len(self.forward_options)):
+            self.forward_probabilities[i] = self.forward_probabilities[i] + \
+                (self.ending_forward_probabilites[i] - self.starting_forward_probabilities[i]) * \
+                (1 / self.max_iterations)
 
-    def set_feasible_cuts(self, all_landing_points):
-        maximal_fitness = 0
-        for cut in self.initial_cuts.values():
-            value = cut.compute_value(all_landing_points)
-            cut.update_cached = True
-
-            if value > 1:
-                maximal_fitness += value
-                self.inactive_cuts.add(cut)
-
-        print("Max Fitness {}".format(maximal_fitness))
-     
     def add_cut(self, cut):
         self.active_cuts.add(cut)
         self.inactive_cuts.remove(cut)
@@ -75,6 +60,9 @@ class Cuts():
 
         choice = self.inactive_cuts.pop()
         self.active_cuts.add(choice)
+
+        if choice.closest_landing_point not in self.active_landing_points:
+            choice.closest_landing_point_distance = sys.maxsize
 
         choice.update_cached = True
 
@@ -93,18 +81,20 @@ class Cuts():
 
         return choice
 
-    def update_landing_points(self, active_landing_points):
+    def update_landing_points(self, active_landing_points, landing_point):
+        #print("Update Landing Points {}".format(landing_point))
         self.active_landing_points = active_landing_points
 
         for cut in self.active_cuts:
-            cut.update_cached = True
+            cut.update_landing_points(landing_point)
 
     def copy_writable(self):
-        writable = Cuts(self.top_left, self.cut_width, self.cut_height)
-        writable.active_cuts = copy.copy(self.active_cuts)
-        writable.inactive_cuts = copy.copy(self.inactive_cuts)
+        writable = Cuts(set())
 
-        writable.active_landing_points = copy.copy(self.active_landing_points)
+        writable.active_cuts = [cut.copy_writable() for cut in list(self.active_cuts)]
+        #writable.inactive_cuts = self.inactive_cuts.copy()
+
+        writable.active_landing_points = self.active_landing_points[:]
 
         return writable
 
@@ -115,6 +105,7 @@ class Cuts():
             value += cut.compute_value(self.active_landing_points)
 
         #print("Cut Compute Value {}".format(time.time() - start_time))
+        self.value = value
         return value
 
     def export(self, output_dir):
@@ -126,18 +117,22 @@ class Cuts():
             output_dict = {}
             
             output_dict["fitness"] = cut.compute_value(self.active_landing_points)
+            output_dict["felling_value"] = cut.felling_value
+            output_dict["harvest_value"] = cut.harvest_value
+            
+            output_dict["equipment_moving_cost"] = cut.equipment_moving_cost
+            output_dict["felling_cost"] = cut.felling_cost
+            output_dict["processing_cost"] = cut.processing_cost
+            output_dict["skidding_cost"] = cut.skidding_cost
+
             output_dict["non_harvest_weight"] = cut.non_harvest_weight
             output_dict["harvest_weight"] = cut.harvest_weight
             output_dict["num_trees"] = cut.num_trees
             output_dict["closest_landing_point_distance"] = cut.closest_landing_point_distance
+            output_dict["closest_landing_point"] = cut.closest_landing_point
 
-            x_center,y_center = cut.center
-
-            x_left = x_center - self.cut_width / 2
-            x_right = x_center + self.cut_width / 2
-
-            y_top = y_center - self.cut_height / 2
-            y_bottom = y_center + self.cut_height / 2
+            x_left, y_top = cut.top_left
+            x_right, y_bottom = cut.bottom_right
 
             output_dict["hull_points"] = [(x_left, y_top), (x_right, y_top),  (x_right, y_bottom), (x_left, y_bottom)]
         
@@ -147,7 +142,7 @@ class Cuts():
                 json.dump(output_dict, fp)
 
     def __str__(self):
-        return "{} Active Cuts {} Inactive Cuts".format(len(self.active_cuts), len(self.inactive_cuts))
+        return "{} Active Cuts".format(len(self.active_cuts))
 
     def __repr__(self):
         return self.__str__()

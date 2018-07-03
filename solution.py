@@ -14,6 +14,7 @@ class Solution():
         
         self.reverse_queue = deque()
 
+
     def add_component(self, component):
         self.forward_options += component.forward_options
         self.forward_probabilities += component.forward_probabilities
@@ -34,6 +35,9 @@ class Solution():
         if self.reverse_queue:
             self.reverse_queue.clear()
         
+        for component in self.components:
+            component.step()
+
         for i in range(1):
             chose_option = False
             while not chose_option:
@@ -71,7 +75,7 @@ class Solution():
         string = ""
 
         for component in self.components:
-            string += str(component) + "\n"
+            string += str(component) + "\t"
         
         return string
 
