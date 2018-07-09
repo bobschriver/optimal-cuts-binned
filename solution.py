@@ -4,8 +4,30 @@ import time
 
 from collections import deque
 
+from cuts import Cuts
+from landings import Landings
+
 class Solution():
+    @classmethod
+    def from_json(cls, solution_json):
+        solution = Solution()
+
+        solution_components_json = solution_json["components"]
+
+        for solution_component_json in solution_components_json:
+            component_type = solution_component_json["component_type"]
+
+            if component_type is "cuts":
+                solution.add_component(Cuts.from_json(solution_component_json))
+            elif component_type is "landings":
+                solution.add_component(Landings.from_json(solution_component_json))
+        
+        solution.value = solution_json["fitness"]
+        return solution
+
     def __init__(self):
+        self.iterations = 0
+
         self.forward_options = []  
         self.forward_probabilities = []
         self.reverse_map = {}
@@ -23,14 +45,16 @@ class Solution():
         self.components.append(component)
     
     def compute_value(self):
-        value = 0.0
+        self.value = 0
         
         for component in self.components:
-            value += component.compute_value()
+            self.value += component.compute_value()
         
-        return value
+        return self.value
         
     def forward(self):
+        self.iterations += 1
+
         # This means we haven't reversed since last moving forward aka a solution has been accepted
         if self.reverse_queue:
             self.reverse_queue.clear()
@@ -70,6 +94,19 @@ class Solution():
             writeable.add_component(component.copy_writable())
         
         return writeable
+
+    def to_json(self):
+        solution_json = {}
+
+        solution_json["fitness"] = self.value
+        solution_json["iterations"] = self.iterations
+
+        solution_json["components"] = []
+
+        for component in self.components:
+            solution_json["components"].append(component.to_json())
+
+        return solution_json
 
     def __str__(self):
         string = ""

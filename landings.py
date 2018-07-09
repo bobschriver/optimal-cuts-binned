@@ -9,7 +9,29 @@ from scipy.spatial.distance import euclidean
 from landing import Landing
 
 class Landings():
+    @classmethod
+    def from_json(cls, landings_json):
+        active_landings = []
+        for landing_json in landings_json["active_landings"]:
+            landing = Landing.from_json(landing_json)
+            active_landings.append(landing)
+        
+        inactive_landings = []
+        for landing_json in landings_json["inactive_landings"]:
+            landing = Landing.from_json(landing_json)
+            inactive_landings.append(landing)
+
+        landings = cls(inactive_landings)
+        landings.active_landings = active_landings
+
+        Landings.value = landings_json["fitness"]
+
+        return landings
+
     def __init__(self, initial_landings):  
+        self.value = 0.0
+        self.component_name = "landings"
+
         self.active_landings = []    
         self.inactive_landings = initial_landings
 
@@ -20,29 +42,29 @@ class Landings():
 
         self.forward_options = [
             self.add_random_landing,
-            self.remove_random_landing
+            self.remove_random_landing,
         ]
         
         self.forward_probabilities = [
             0.15,
-            0.03
+            0.03,
         ]
         
         self.reverse_map = {
             self.add_random_landing: self.remove_landing,
-            self.remove_random_landing: self.add_landing
+            self.remove_random_landing: self.add_landing,
         }
 
         self.max_iterations = 100000
 
         self.starting_forward_probabilities = [
             0.15,
-            0.03
+            0.03,
         ]
 
         self.ending_forward_probabilites = [
-            0.1,
-            0.1
+            0.03,
+            0.15,
         ]
 
     def step(self):
@@ -93,13 +115,30 @@ class Landings():
 
         return choice
     
+    def exchange_random_landing(self):
+        if len(self.inactive_landings) == 0:
+            return None
+        
+        if len(self.active_landings) == 0:
+            return None
+
+        landing_pair = (random.choice(self.active_landings), random.choice(self.inactive_landings))
+
+        self.exchange_landing(landing_pair)
+
+        return (landing_pair[1], landing_pair[0])
+
+    def exchange_landing(self, landing_pair):
+        self.remove_landing(landing_pair[0])
+        self.add_landing(landing_pair[1])    
+
     def compute_value(self):
-        value = 0
+        self.value = 0.0
+
         for landing in self.active_landings:
-            value += landing.compute_value()
+            self.value += landing.compute_value()
             
-        self.value = value
-        return value
+        return self.value
     
     def copy_writable(self):
         writable = Landings(self.inactive_landings[:])
@@ -121,8 +160,24 @@ class Landings():
         with open(os.path.join(landings_output_dir, "landings.json"), 'w') as fp:
             json.dump(landings_dict, fp)
 
+    def to_json(self):
+        landings_json = {}
+
+        landings_json["component_type"] = "landings"
+        landings_json["fitness"] = self.value
+
+        landings_json["active_landings"] = []
+        for landing in self.active_landings:
+            landings_json["active_landings"].append(landing.to_json())
+        
+        landings_json["inactive_landings"] = []
+        for landing in self.inactive_landings:
+            landings_json["inactive_landings"].append(landing.to_json())
+
+        return landings_json
+
     def __str__(self):
-        return "{} Active Landings {} Inactive Landings".format(len(self.active_landings), len(self.inactive_landings))
+        return "AL {} INAL {}".format(len(self.active_landings), len(self.inactive_landings))
 
     def __repr__(self):
         return self.__str__()

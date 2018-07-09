@@ -63,8 +63,9 @@ class RecordToRecord():
     def __init__(self):
         self.base_value = -1000000.0
         self.best_value = -1000000.0
+        self.final_value = -1000000.0
 
-    def configure(self, deviation=0.05, max_iterations=1000):           
+    def configure(self, deviation=0.05, max_iterations=100000):           
         self.deviation = deviation
         self.max_iterations = max_iterations        
     
@@ -74,8 +75,11 @@ class RecordToRecord():
         
         if solution_value > self.best_value:
             self.best_value = solution_value
-            self.best_solution = solution.copy_writable()
-            self.final_solution = self.best_solution
+            self.best_solution_json = solution.to_json()
+
+            self.final_value = self.best_value
+            self.final_solution_json = self.best_solution_json
+
 
     def continue_solving(self, iterations):
         return iterations < self.max_iterations

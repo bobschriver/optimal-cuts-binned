@@ -11,7 +11,29 @@ from scipy.spatial import KDTree
 from cut import Cut
 
 class Cuts():
+    @classmethod
+    def from_json(cls, cuts_json):
+        active_cuts = set()
+        for cut_json in cuts_json["active_cuts"]:
+            cut = Cut.from_json(cut_json)
+            active_cuts.add(cut)
+        
+        inactive_cuts = set()
+        for cut_json in cuts_json["inactive_cuts"]:
+            cut = Cut.from_json(cut_json)
+            inactive_cuts.add(cut)
+
+        cuts = cls(inactive_cuts)
+        cuts.active_cuts = active_cuts
+        
+        cuts.value = cuts_json["fitness"]
+
+        return cuts
+
     def __init__(self, initial_cuts):
+        self.value = 0
+        self.component_name = "cuts"
+
         self.inactive_cuts = initial_cuts
         self.active_cuts = set()
         
@@ -58,11 +80,10 @@ class Cuts():
         if len(self.inactive_cuts) == 0:
             return None
 
+        #print("Add Random Cut")
+
         choice = self.inactive_cuts.pop()
         self.active_cuts.add(choice)
-
-        if choice.closest_landing_point not in self.active_landing_points:
-            choice.closest_landing_point_distance = sys.maxsize
 
         choice.update_cached = True
 
@@ -76,17 +97,30 @@ class Cuts():
         if len(self.active_cuts) == 0:
             return None
 
+        #print("Remove Random Cut")
+
         choice = self.active_cuts.pop()
         self.inactive_cuts.add(choice)
 
         return choice
 
+    #TODO: Figure out how to do this on reset
     def update_landing_points(self, active_landing_points, landing_point):
         #print("Update Landing Points {}".format(landing_point))
         self.active_landing_points = active_landing_points
 
+        #cuts_to_remove = []
+        #if landing_point not in active_landing_points:
+        #    for cut in self.active_cuts:
+        #        if cut.closest_landing_point == landing_point:
+        #            cuts_to_remove.append(cut)
+        
         for cut in self.active_cuts:
             cut.update_landing_points(landing_point)
+
+        #for cut in cuts_to_remove:
+        #    self.remove_cut(cut)
+
 
     def copy_writable(self):
         writable = Cuts(set())
@@ -98,15 +132,44 @@ class Cuts():
 
         return writable
 
+    def remove_orphaned_cuts(self):
+        cuts_to_remove = []
+        for cut in self.active_cuts:
+            if cut.closest_landing_point_distance > 10000:
+                cuts_to_remove.append(cut)
+
+        for cut in cuts_to_remove:
+            self.remove_cut(cut)
+
     def compute_value(self):
-        value = 0
+        self.value = 0
 
         for cut in self.active_cuts:
-            value += cut.compute_value(self.active_landing_points)
+            cut.find_closest_active_landing_point(self.active_landing_points)
 
-        #print("Cut Compute Value {}".format(time.time() - start_time))
-        self.value = value
-        return value
+        #self.remove_orphaned_cuts()
+
+        for cut in self.active_cuts:
+            self.value += cut.compute_value()
+
+        return self.value
+
+    def to_json(self):
+        cuts_json = {}
+
+        cuts_json["component_type"] = "cuts"
+        cuts_json["fitness"] = self.value
+
+        cuts_json["active_cuts"] = []
+        for cut in self.active_cuts:
+            cuts_json["active_cuts"].append(cut.to_json())
+        
+        cuts_json["inactive_cuts"] = []
+        for cut in self.inactive_cuts:
+            cuts_json["inactive_cuts"].append(cut.to_json())
+
+        return cuts_json
+
 
     def export(self, output_dir):
         cuts_output_dir = os.path.join(output_dir, "cuts")
@@ -142,7 +205,7 @@ class Cuts():
                 json.dump(output_dict, fp)
 
     def __str__(self):
-        return "{} Active Cuts".format(len(self.active_cuts))
+        return "AC {} INAC {}".format(len(self.active_cuts), len(self.inactive_cuts))
 
     def __repr__(self):
         return self.__str__()
