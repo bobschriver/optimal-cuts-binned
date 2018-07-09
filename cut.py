@@ -29,6 +29,7 @@ class Cut():
 
     def __init__(self, top_left, bottom_right):
         self.update_cached = True
+        self.orphaned = False
         self.value = 0
 
         self.total_weight = 0
@@ -165,7 +166,7 @@ class Cut():
         basin_distance = 0
 
         if self.basin != landing_basin:
-            basin_distance = 500
+            basin_distance = 10000
 
         return euclidean((self.x, self.y), (landing_x, landing_y)) + basin_distance
         #return euclidean((self.x, self.y), (landing_x, landing_y))
@@ -183,6 +184,11 @@ class Cut():
 
             self.closest_landing_point = closest_active_landing_point
             self.closest_landing_point_distance = min_landing_point_distance
+
+            if self.closest_landing_point_distance > 10000:
+                self.orphaned = True
+            else:
+                self.orphaned = False
             
 
     def compute_value(self):
@@ -202,6 +208,9 @@ class Cut():
 
             self.update_cached = True
         """
+
+        if self.orphaned:
+            return 0.0
             
         if self.update_cached: 
             self.equipment_moving_cost = self.closest_landing_point_distance * 0.01

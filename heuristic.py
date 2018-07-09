@@ -65,7 +65,7 @@ class RecordToRecord():
         self.best_value = -1000000.0
         self.final_value = -1000000.0
 
-    def configure(self, deviation=0.00, max_iterations=100000):           
+    def configure(self, deviation=0.05, max_iterations=100000):           
         self.deviation = deviation
         self.max_iterations = max_iterations        
     
