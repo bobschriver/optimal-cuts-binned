@@ -144,7 +144,7 @@ class Cut():
             if updated_landing_point not in self.landing_point_distances:
                 self.landing_point_distances[updated_landing_point] = self.compute_distance(updated_landing_point)
             
-            if self.landing_point_distances[updated_landing_point] < self.closest_landing_point_distance:
+            
                 self.closest_landing_point = updated_landing_point
                 self.closest_landing_point_distance = self.landing_point_distances[updated_landing_point]
 
@@ -155,6 +155,9 @@ class Cut():
 
         if updated_landing_point not in self.landing_point_distances:
             self.landing_point_distances[updated_landing_point] = self.compute_distance(updated_landing_point)
+
+        if self.landing_point_distances[updated_landing_point] < self.closest_landing_point_distance:
+            self.update_cached = True
     
     def compute_distance(self, landing_point):
         landing_x, landing_y, landing_elevation, landing_basin = landing_point

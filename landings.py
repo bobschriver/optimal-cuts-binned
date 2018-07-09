@@ -82,6 +82,7 @@ class Landings():
 
         self.active_landings.append(landing)
         self.active_landing_points.append(landing.point)
+        
         self.inactive_landings.remove(landing)
 
         self.update_active_landings(landing)
