@@ -25,6 +25,9 @@ class Cut():
         cut.basin = cut_json["basin"]
         cut.elevation = cut_json["elevation"]
 
+        if "orphaned" in cut_json:
+            cut.orphaned = cut_json["orphaned"]
+
         return cut
 
     def __init__(self, top_left, bottom_right):
@@ -108,6 +111,8 @@ class Cut():
 
         cut_json["basin"] = self.basin
         cut_json["elevation"] = self.elevation
+
+        cut_json["orphaned"] = self.orphaned
 
         return cut_json        
 

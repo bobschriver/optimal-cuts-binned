@@ -41,12 +41,14 @@ class Cuts():
 
         self.forward_options = [
             self.add_random_cut,
-            self.remove_random_cut
+            self.remove_random_cut,
+            self.remove_orphaned_cuts
         ]
         
         self.forward_probabilities = [
            1.0,
-           0.5
+           0.5,
+           0.001,
         ]
         
         self.reverse_map = {
@@ -58,12 +60,14 @@ class Cuts():
 
         self.starting_forward_probabilities = [
             1.0,
-            0.5
+            0.6,
+            0.001,
         ]
 
         self.ending_forward_probabilites = [
-            0.5,
-            1.0
+            0.3,
+            1.0,
+            0.001,
         ]
 
     def step(self):
@@ -132,22 +136,21 @@ class Cuts():
 
         return writable
 
-    def remove_orphaned_cuts(self):
-        cuts_to_remove = []
+    def remove_orphaned_cuts(self):   
+        cuts_to_remove = set()
         for cut in self.active_cuts:
-            if cut.closest_landing_point_distance > 10000:
-                cuts_to_remove.append(cut)
+            if cut.orphaned:
+                cuts_to_remove.add(cut)
 
-        for cut in cuts_to_remove:
-            self.remove_cut(cut)
+        self.active_cuts.difference_update(cuts_to_remove)
+        self.inactive_cuts.update(cuts_to_remove)
+
 
     def compute_value(self):
         self.value = 0
 
         for cut in self.active_cuts:
             cut.find_closest_active_landing_point(self.active_landing_points)
-
-        #self.remove_orphaned_cuts()
 
         for cut in self.active_cuts:
             self.value += cut.compute_value()

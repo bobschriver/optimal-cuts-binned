@@ -23,8 +23,8 @@ class SimulatedAnnealing():
     def __init__(self):
         self.base_value = -1000000.0
         self.best_value = -1000000.0
-        
-        
+        self.final_value = -1000000.0
+         
     def configure(self, temperature=0.25, min_temperature=0.0001, alpha=0.99, repetitions=100):
         self.temperature = temperature
         self.repetitions = repetitions
@@ -33,10 +33,13 @@ class SimulatedAnnealing():
         
     def set_base_solution(self, solution):
         solution_value = solution.compute_value()
+        
         self.base_value = solution_value
-        self.base_solution = solution
+        self.base_solution_json = solution.to_json()
 
-        self.final_solution = self.base_solution.copy_writable()
+        if self.base_value > self.final_value:
+            self.final_value = self.base_value
+            self.final_solution_json = self.base_solution_json
 
     def continue_solving(self, iterations):
         if iterations % self.repetitions == 0:

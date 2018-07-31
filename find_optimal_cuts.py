@@ -49,9 +49,9 @@ class Solver():
         while self.heuristic.continue_solving(iterations):
             iterations += 1
 
-            print("{}\t{}\t{}".format(self.solution, self.solution.compute_value(), self.heuristic.final_value))
+            #print("{}\t{}\t{}".format(self.solution, self.solution.compute_value(), self.heuristic.final_value))
             self.solution.forward()
-            print("{}\t{}\t{}".format(self.solution, self.solution.compute_value(), self.heuristic.final_value))
+            #print("{}\t{}\t{}".format(self.solution, self.solution.compute_value(), self.heuristic.final_value))
 
             accept_solution = self.heuristic.accept_solution(self.solution)
             if not accept_solution:
@@ -61,11 +61,11 @@ class Solver():
                 #print("{} \t A \t {:03.2f} \t {:03.2f} \t {:03.2f}".format(iterations, self.solution.compute_value(), self.heuristic.base_value, self.heuristic.best_value))
                 self.heuristic.set_base_solution(self.solution)
             
-            print("{}\t{}\t{}".format(self.solution, self.solution.compute_value(), self.heuristic.final_value))
-            print()
+            #print("{}\t{}\t{}".format(self.solution, self.solution.compute_value(), self.heuristic.final_value))
+            #print()
 
 
-            if iterations % 1000 == 0:
+            if iterations % 10000 == 0:
                 print("{} Curr Value {} Base Value {} Best Value {} seconds {}".format(iterations, self.solution.compute_value(), self.heuristic.base_value, self.heuristic.best_value, time.time() - start_time))
                 print("Curr\t{}".format(self.solution))
                 print("Final\t{}".format(solution_json_to_str(self.heuristic.final_solution_json)))
@@ -222,7 +222,7 @@ else:
 
 num_trials = 100
 
-heuristic_type = "RecordToRecord"
+heuristic_type = "SimulatedAnnealing"
 
 output_dir = heuristic_type
 if not os.path.exists(output_dir):
@@ -244,6 +244,8 @@ for j in range(num_trials):
 
     if heuristic_type is "RecordToRecord":
         heuristic = RecordToRecord()
+    elif heuristic_type is "SimulatedAnnealing":
+        heuristic = SimulatedAnnealing()
         
     heuristic.configure()
         
