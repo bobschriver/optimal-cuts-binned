@@ -90,6 +90,7 @@ class Cuts():
         self.active_cuts.add(choice)
 
         choice.update_cached = True
+        choice.orphaned = False
 
         return choice
 
@@ -141,6 +142,7 @@ class Cuts():
         for cut in self.active_cuts:
             if cut.orphaned:
                 cuts_to_remove.add(cut)
+                cut.orphaned = False
 
         self.active_cuts.difference_update(cuts_to_remove)
         self.inactive_cuts.update(cuts_to_remove)

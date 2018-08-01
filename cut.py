@@ -140,22 +140,6 @@ class Cut():
         # If we removed it, and it is not the closest landing point, 
         # it could not have a closer landing point distance
         # If we added it, check if it is closer than our current landing point
-        """
-        if updated_landing_point == self.closest_landing_point:
-            self.closest_landing_point = (sys.maxsize, sys.maxsize)
-            self.closest_landing_point_distance = sys.maxsize
-
-            self.update_cached = True
-        else:
-            if updated_landing_point not in self.landing_point_distances:
-                self.landing_point_distances[updated_landing_point] = self.compute_distance(updated_landing_point)
-            
-            
-                self.closest_landing_point = updated_landing_point
-                self.closest_landing_point_distance = self.landing_point_distances[updated_landing_point]
-
-                self.update_cached = True
-        """
         if updated_landing_point == self.closest_landing_point:
             self.update_cached = True
 
@@ -197,23 +181,6 @@ class Cut():
             
 
     def compute_value(self):
-        """
-        if self.closest_landing_point_distance == sys.maxsize or self.closest_landing_point not in active_landing_points:
-            min_landing_point_distance = sys.maxsize
-            for active_landing_point in active_landing_points:
-                if active_landing_point not in self.landing_point_distances:
-                    self.landing_point_distances[active_landing_point] = self.compute_distance(active_landing_point)
-
-                if self.landing_point_distances[active_landing_point] < min_landing_point_distance:
-                    min_landing_point_distance = self.landing_point_distances[active_landing_point]
-                    closest_active_landing_point = active_landing_point
-
-            self.closest_landing_point = closest_active_landing_point
-            self.closest_landing_point_distance = min_landing_point_distance
-
-            self.update_cached = True
-        """
-
         if self.orphaned:
             return 0.0
             

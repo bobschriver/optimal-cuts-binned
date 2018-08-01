@@ -7,8 +7,6 @@ import copy
 import math
 import json
 
-import numpy as np
-
 from cut import Cut
 from cuts import Cuts
 from landing import Landing
@@ -93,21 +91,24 @@ def landings_from_csv(csv_path):
     """
     with open(csv_path) as landing_points_file:
         landing_points_reader = csv.reader(landing_points_file)
-        _ = next(landing_points_reader)
+        header = next(landing_points_reader)
     
-        for landing_point_line in landing_points_reader:
-            _, _, _, x_str, y_str, elev_str, basin_str = landing_point_line
-    
-            x = float(x_str)
-            y = float(y_str)
+        x_index = header.index("x")
+        y_index = header.index("y")
+        elevation_index = header.index("elevation")
+        basin_index = header.index("basin")
 
-            elevation = float(elev_str)
-            basin = int(basin_str)
+        for landing_point_line in landing_points_reader:
+            x = float(landing_point_line[x_index])
+            y = float(landing_point_line[y_index])
+
+            elevation = float(landing_point_line[elevation_index])
+            basin = int(landing_point_line[basin_index])
+
             coordinate = (x, y, elevation, basin)
     
             initial_landings_coordinates.append(coordinate)
     
-
     return [Landing(coordinate) for coordinate in initial_landings_coordinates]
 
 def binned_cuts_from_csv(csv_path, global_top_left, cut_width, cut_height):
@@ -127,18 +128,22 @@ def binned_cuts_from_csv(csv_path, global_top_left, cut_width, cut_height):
     """
     with open(csv_path) as tree_points_file:
         tree_points_reader = csv.reader(tree_points_file)
-        _ = next(tree_points_reader)
+        header = next(tree_points_reader)
     
-        for tree_point_line in tree_points_reader:
-            _, _, _, _, elev_str, basin_str, x_str, y_str, height_str = tree_point_line
-            x = float(x_str)
-            y = float(y_str)
-    
+        x_index = header.index("x")
+        y_index = header.index("y")
+        elevation_index = header.index("elevation")
+        basin_index = header.index("basin")
+        height_index = header.index("height")
 
-            elevation = float(elev_str)
-            basin = int(basin_str)
+        for tree_point_line in tree_points_reader:
+            x = float(tree_point_line[x_index])
+            y = float(tree_point_line[y_index])
+
+            elevation = float(tree_point_line[elevation_index])
+            basin = int(tree_point_line[basin_index])
    
-            height = float(height_str)
+            height = float(tree_point_line[height_index])
             weight = height * 0.82 * 49.91 * 0.000454
 
             #Yes, it is weird that weight is in the coordinate
@@ -146,7 +151,6 @@ def binned_cuts_from_csv(csv_path, global_top_left, cut_width, cut_height):
 
             initial_tree_coordinates.append(coordinate)
     
-
     min_x, min_y = global_top_left
 
     initial_cuts = {}
@@ -177,7 +181,8 @@ def binned_get_feasible_cuts(initial_cuts, all_landing_points):
     print(time.time())
     feasible_cuts = set()
     for cut in initial_cuts:
-        value = cut.compute_value(all_landing_points)
+        cut.find_closest_active_landing_point(all_landing_points)
+        value = cut.compute_value()
 
         cut.closest_landing_point_distance = sys.maxsize
         cut.update_cached = True
@@ -190,15 +195,14 @@ def binned_get_feasible_cuts(initial_cuts, all_landing_points):
     print("Max Fitness {}".format(maximal_fitness))
     return feasible_cuts
 
-tree_points_path = os.path.join("/Users", "schriver", "projects", "optimal_cuts_binned", "44120_g2_trees.txt")
-road_points_path = os.path.join("/Users", "schriver", "projects", "optimal_cuts_binned", "44120_g2_roads.txt")
+# CONFIGURATION
+tree_points_path = "44120_g2_trees.txt"
+road_points_path = "44120_g2_roads.txt"
 
-#top_left = (1141311.44275, 1374717.3778)
-#top_left = (1374717.3778, 1141311.44275)
 top_left = (1377133.37353, 1118720.7104)
-#top_left = (0, 0)
-
 cut_width, cut_height = (50, 50)
+
+heuristic_type = "RecordToRecord"
 
 if not os.path.exists("initial_landings.json"):
     initial_landings_list = landings_from_csv(road_points_path)
@@ -212,7 +216,9 @@ else:
 
 if not os.path.exists("feasible_cuts.json"):
     initial_cuts_list = binned_cuts_from_csv(tree_points_path, top_left, cut_width, cut_height)
+    initial_landings_list = Landings.from_json(initial_landings_json).inactive_landings
     feasible_cuts_list = binned_get_feasible_cuts(initial_cuts_list, [landing.point for landing in initial_landings_list])
+    
     feasible_cuts = Cuts(feasible_cuts_list)
 
     starting_cuts_json = feasible_cuts.to_json()
@@ -221,8 +227,6 @@ else:
     starting_cuts_json = json.load(open("feasible_cuts.json", "rb"))
 
 num_trials = 100
-
-heuristic_type = "SimulatedAnnealing"
 
 output_dir = heuristic_type
 if not os.path.exists(output_dir):
