@@ -44,6 +44,10 @@ class Solver():
     def solve(self):
         iterations = 0
         start_time = time.time()
+
+        iteration_fitnesses = {}
+        iteration_fitnesses["current_value"] = {}
+        iteration_fitnesses["best_value"] = {}
         while self.heuristic.continue_solving(iterations):
             iterations += 1
 
@@ -71,10 +75,13 @@ class Solver():
             
             if iterations % 1000 == 0:
                 json.dump(self.heuristic.final_solution_json, open("latest_solution.json", "wb"), indent=2)
+
+                iteration_fitnesses["current_value"][iterations] = self.heuristic.base_value
+                iteration_fitnesses["best_value"][iterations] = self.heuristic.best_value
                 
 
         #self.heuristic.final_solution.export("final")
-        return self.heuristic.final_solution_json
+        return (self.heuristic.final_solution_json, iteration_fitnesses)
 
 def landings_from_csv(csv_path):
     initial_landings_coordinates = []
@@ -202,7 +209,7 @@ road_points_path = "44120_g2_roads.txt"
 top_left = (1377133.37353, 1118720.7104)
 cut_width, cut_height = (50, 50)
 
-heuristic_type = "RecordToRecord"
+heuristic_type = "SimulatedAnnealing"
 
 if not os.path.exists("initial_landings.json"):
     initial_landings_list = landings_from_csv(road_points_path)
@@ -254,10 +261,12 @@ for j in range(num_trials):
     heuristic.configure()
         
     solver = Solver(heuristic, initial_solution)
-    final_solution_json = solver.solve()
+    final_solution_json, iteration_fitnesses = solver.solve()
  
-    solution_path = os.path.join(output_dir, "{}_{}.json".format(j, int(final_solution_json["fitness"])))
+    solution_name = "{}_{}".format(j, int(final_solution_json["fitness"]))
+    solution_path = os.path.join(output_dir, "{}.json".format(solution_name))
     json.dump(final_solution_json, open(solution_path, "wb"), indent=2)    
+    json.dump(iteration_fitnesses, open(os.path.join(output_dir, "{}_iteration_fitnesses.json".format(solution_name)), "w"), indent=2)
         
         
 

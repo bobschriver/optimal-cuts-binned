@@ -6,6 +6,7 @@ import copy
 import json
 import math
 
+
 from scipy.spatial import KDTree
 
 from cut import Cut
@@ -56,17 +57,17 @@ class Cuts():
             self.remove_random_cut: self.add_cut
         }
 
-        self.max_iterations = 100000
+        self.max_iterations = 100000.0
 
         self.starting_forward_probabilities = [
             1.0,
-            0.6,
+            0.5,
             0.001,
         ]
 
         self.ending_forward_probabilites = [
-            0.3,
             1.0,
+            0.5,
             0.001,
         ]
 
@@ -89,8 +90,7 @@ class Cuts():
         choice = self.inactive_cuts.pop()
         self.active_cuts.add(choice)
 
-        choice.update_cached = True
-        choice.orphaned = False
+        choice.reset_state()
 
         return choice
 
@@ -113,18 +113,9 @@ class Cuts():
     def update_landing_points(self, active_landing_points, landing_point):
         #print("Update Landing Points {}".format(landing_point))
         self.active_landing_points = active_landing_points
-
-        #cuts_to_remove = []
-        #if landing_point not in active_landing_points:
-        #    for cut in self.active_cuts:
-        #        if cut.closest_landing_point == landing_point:
-        #            cuts_to_remove.append(cut)
         
         for cut in self.active_cuts:
             cut.update_landing_points(landing_point)
-
-        #for cut in cuts_to_remove:
-        #    self.remove_cut(cut)
 
 
     def copy_writable(self):
@@ -142,7 +133,6 @@ class Cuts():
         for cut in self.active_cuts:
             if cut.orphaned:
                 cuts_to_remove.add(cut)
-                cut.orphaned = False
 
         self.active_cuts.difference_update(cuts_to_remove)
         self.inactive_cuts.update(cuts_to_remove)

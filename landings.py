@@ -55,7 +55,7 @@ class Landings():
             self.remove_random_landing: self.add_landing,
         }
 
-        self.max_iterations = 100000
+        self.max_iterations = 100000.0
 
         self.starting_forward_probabilities = [
             0.1,

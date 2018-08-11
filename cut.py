@@ -2,7 +2,13 @@ import sys
 
 from scipy.spatial.distance import euclidean
 
+from enum import Enum
 
+class ClosestLandingState(Enum):
+    KNOWN = 1 # Closest landing point is known and active
+    UNKNOWN = 2 # Closest landing point is unknown
+    SUBOPTIMAL = 3 # Closest landing point is no longer closest
+    INACTIVE = 4 # Closest landing point is inactive
 
 class Cut():
     @classmethod
@@ -30,9 +36,14 @@ class Cut():
 
         return cut
 
-    def __init__(self, top_left, bottom_right):
+    def reset_state(self):
         self.update_cached = True
         self.orphaned = False
+        self.closest_landing_state = ClosestLandingState.UNKNOWN
+
+
+    def __init__(self, top_left, bottom_right):
+        self.reset_state()
         self.value = 0
 
         self.total_weight = 0
@@ -133,6 +144,9 @@ class Cut():
             self.harvest_weight += weight
 
     def update_landing_points(self, updated_landing_point):
+        if updated_landing_point not in self.landing_point_distances:
+            self.landing_point_distances[updated_landing_point] = self.compute_distance(updated_landing_point)
+
         # If our closest landing point is equal to the updated landing point
         # That means we are removing the landing point - need to find a new one
 
@@ -141,12 +155,11 @@ class Cut():
         # it could not have a closer landing point distance
         # If we added it, check if it is closer than our current landing point
         if updated_landing_point == self.closest_landing_point:
+            self.closest_landing_state = ClosestLandingState.INACTIVE
             self.update_cached = True
 
-        if updated_landing_point not in self.landing_point_distances:
-            self.landing_point_distances[updated_landing_point] = self.compute_distance(updated_landing_point)
-
         if self.landing_point_distances[updated_landing_point] < self.closest_landing_point_distance:
+            self.closest_landing_state = ClosestLandingState.SUBOPTIMAL
             self.update_cached = True
     
     def compute_distance(self, landing_point):
@@ -161,7 +174,11 @@ class Cut():
         #return euclidean((self.x, self.y), (landing_x, landing_y))
 
     def find_closest_active_landing_point(self, active_landing_points):
-        if self.update_cached:
+        if (
+            self.closest_landing_state == ClosestLandingState.UNKNOWN or 
+            self.closest_landing_state == ClosestLandingState.SUBOPTIMAL or 
+            self.closest_landing_state == ClosestLandingState.INACTIVE
+        ):
             min_landing_point_distance = sys.maxsize
             for active_landing_point in active_landing_points:
                 if active_landing_point not in self.landing_point_distances:
@@ -174,10 +191,15 @@ class Cut():
             self.closest_landing_point = closest_active_landing_point
             self.closest_landing_point_distance = min_landing_point_distance
 
-            if self.closest_landing_point_distance > 10000:
+            if (
+                self.closest_landing_state == ClosestLandingState.INACTIVE and 
+                self.closest_landing_point_distance > 10000
+            ):
                 self.orphaned = True
             else:
                 self.orphaned = False
+
+            self.closest_landing_state = ClosestLandingState.KNOWN
             
 
     def compute_value(self):

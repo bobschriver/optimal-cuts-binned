@@ -59,9 +59,14 @@ class Solution():
         if self.reverse_queue:
             self.reverse_queue.clear()
         
+        # Yes, this is weird
+        self.forward_probabilities = []
         for component in self.components:
             component.step()
+            self.forward_probabilities += component.forward_probabilities
 
+        # Theoretically we could have this do multiple steps at a time
+        # But for now we just have one
         for i in range(1):
             chose_option = False
             while not chose_option:
