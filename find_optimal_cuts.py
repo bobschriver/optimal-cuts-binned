@@ -6,6 +6,8 @@ import time
 import copy
 import math
 import json
+import argparse
+import uuid
 
 from cut import Cut
 from cuts import Cuts
@@ -13,7 +15,11 @@ from landing import Landing
 from landings import Landings
 
 from solution import Solution
-from heuristic import RecordToRecord,SimulatedAnnealing
+from heuristic import RecordToRecord, SimulatedAnnealing
+
+import boto3
+
+s3 = boto3.resource('s3')
 
 def solution_json_to_str(solution_json):
     active_landings = 0
@@ -37,9 +43,10 @@ def solution_json_to_str(solution_json):
         inactive_cuts)
 
 class Solver():
-    def __init__(self, heuristic, solution):
+    def __init__(self, heuristic, solution, output_dirname):
         self.heuristic = heuristic
         self.solution = solution
+        self.output_dirname = output_dirname
             
     def solve(self):
         iterations = 0
@@ -67,20 +74,24 @@ class Solver():
             #print()
 
 
-            if iterations % 10000 == 0:
+            if iterations % 1000 == 0:
                 print("{} Curr Value {} Base Value {} Best Value {} seconds {}".format(iterations, self.solution.compute_value(), self.heuristic.base_value, self.heuristic.best_value, time.time() - start_time))
                 print("Curr\t{}".format(self.solution))
                 print("Final\t{}".format(solution_json_to_str(self.heuristic.final_solution_json)))
                 start_time = time.time()
             
             if iterations % 1000 == 0:
-                json.dump(self.heuristic.final_solution_json, open("latest_solution.json", "wb"), indent=2)
-
                 iteration_fitnesses["current_value"][iterations] = self.heuristic.base_value
                 iteration_fitnesses["best_value"][iterations] = self.heuristic.best_value
                 
+            if iterations % 10000 == 0:
+                current_solution_json = self.solution.to_json()
+                current_solution_path = os.path.join(bucket_dirname, "{}.json".format(int(current_solution_json["fitness"])))
+                current_solution_object = s3.Object("optimal-cuts", current_solution_path)
+                current_solution_object.put(Body=json.dumps(current_solution_json, indent=2))
+                #json.dump(current_solution_json, open(current_solution_path, "w"))
+                print("Wrote current solution to {}".format(current_solution_path))
 
-        #self.heuristic.final_solution.export("final")
         return (self.heuristic.final_solution_json, iteration_fitnesses)
 
 def landings_from_csv(csv_path):
@@ -185,7 +196,6 @@ def binned_cuts_from_csv(csv_path, global_top_left, cut_width, cut_height):
 
 def binned_get_feasible_cuts(initial_cuts, all_landing_points):
     maximal_fitness = 0
-    print(time.time())
     feasible_cuts = set()
     for cut in initial_cuts:
         cut.find_closest_active_landing_point(all_landing_points)
@@ -198,49 +208,67 @@ def binned_get_feasible_cuts(initial_cuts, all_landing_points):
             maximal_fitness += value
             feasible_cuts.add(cut)
 
-    print(time.time())
     print("Max Fitness {}".format(maximal_fitness))
     return feasible_cuts
 
 # CONFIGURATION
-tree_points_path = "44120_g2_trees.txt"
-road_points_path = "44120_g2_roads.txt"
+parser = argparse.ArgumentParser()
+parser.add_argument("--tile_name", dest="tile_name")       
+parser.add_argument("--heuristic", dest="heuristic")
+parser.add_argument("--num_trials", dest="num_trials", default=100, type=int)
+parser.add_argument("--top_left", dest="top_left", default=(0, 0), type=tuple)
+parser.add_argument("--cut_size", dest="cut_size", default=(50, 50), type=tuple)
 
-top_left = (1377133.37353, 1118720.7104)
-cut_width, cut_height = (50, 50)
+args = parser.parse_args()
 
-heuristic_type = "SimulatedAnnealing"
+tile_name = args.tile_name
+tree_points_path = "{}-trees.txt".format(tile_name)
+landing_points_path = "{}-landings.txt".format(tile_name)
+heuristic_type = args.heuristic
+num_trials = args.num_trials
+top_left = args.top_left
+cut_width, cut_height = args.cut_size
+min_basin = 0
+algorithm_name = "grid_cell"
 
-if not os.path.exists("initial_landings.json"):
-    initial_landings_list = landings_from_csv(road_points_path)
-    initial_landings = Landings(initial_landings_list)
+tile_initial_landings_filename = "{}_initial_landings.json".format(tile_name)
+if not os.path.exists(tile_initial_landings_filename):
+    initial_landings_list = landings_from_csv(landing_points_path)
+
+    active_landings_list = []
+    inactive_landings_list = initial_landings_list
+    initial_landings = Landings(active_landings_list, inactive_landings_list)
 
     initial_landings_json = initial_landings.to_json()
 
-    json.dump(initial_landings_json, open("initial_landings.json", "wb"))
+    json.dump(initial_landings_json, open(tile_initial_landings_filename, "w"))
 else:
-    initial_landings_json = json.load(open("initial_landings.json", "rb"))
+    initial_landings_json = json.load(open(tile_initial_landings_filename, "rb"))
 
-if not os.path.exists("feasible_cuts.json"):
+tile_feasible_cuts_filename = "{}_feasible_cuts.json".format(tile_name)
+if not os.path.exists(tile_feasible_cuts_filename):
     initial_cuts_list = binned_cuts_from_csv(tree_points_path, top_left, cut_width, cut_height)
     initial_landings_list = Landings.from_json(initial_landings_json).inactive_landings
-    feasible_cuts_list = binned_get_feasible_cuts(initial_cuts_list, [landing.point for landing in initial_landings_list])
-    
-    feasible_cuts = Cuts(feasible_cuts_list)
+    feasible_cuts_set = binned_get_feasible_cuts(initial_cuts_list, [landing.point for landing in initial_landings_list])
+    exit()
+
+    active_cuts_set = set()
+    inactive_cuts_set = feasible_cuts_set
+    feasible_cuts = Cuts(active_cuts_set, inactive_cuts_set)
 
     starting_cuts_json = feasible_cuts.to_json()
-    json.dump(starting_cuts_json, open("feasible_cuts.json", "wb"))
+    json.dump(starting_cuts_json, open(tile_feasible_cuts_filename, "w"))
 else:
-    starting_cuts_json = json.load(open("feasible_cuts.json", "rb"))
+    starting_cuts_json = json.load(open(tile_feasible_cuts_filename, "rb"))
 
-num_trials = 100
-
-output_dir = heuristic_type
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
 
 for j in range(num_trials):
     print("TRIAL {}".format(j))
+    trial_uuid = str(uuid.uuid4())
+
+    bucket_dirname = os.path.join("output", algorithm_name, heuristic_type, tile_name, trial_uuid)
+    os.makedirs(bucket_dirname)
+
     landings = Landings.from_json(initial_landings_json)
     cuts = Cuts.from_json(starting_cuts_json)
 
@@ -253,21 +281,26 @@ for j in range(num_trials):
     initial_solution.add_component(landings)
     initial_solution.add_component(cuts)
 
-    if heuristic_type is "RecordToRecord":
+    if heuristic_type == "RecordToRecord":
         heuristic = RecordToRecord()
-    elif heuristic_type is "SimulatedAnnealing":
+    elif heuristic_type == "SimulatedAnnealing":
         heuristic = SimulatedAnnealing()
         
     heuristic.configure()
         
-    solver = Solver(heuristic, initial_solution)
+    solver = Solver(heuristic, initial_solution, bucket_dirname)
     final_solution_json, iteration_fitnesses = solver.solve()
- 
-    solution_name = "{}_{}".format(j, int(final_solution_json["fitness"]))
-    solution_path = os.path.join(output_dir, "{}.json".format(solution_name))
-    json.dump(final_solution_json, open(solution_path, "wb"), indent=2)    
-    json.dump(iteration_fitnesses, open(os.path.join(output_dir, "{}_iteration_fitnesses.json".format(solution_name)), "w"), indent=2)
-        
+
+    final_solution_path = os.path.join(bucket_dirname, "{}_final.json".format(int(final_solution_json["fitness"])))
+    final_solution_object = s3.Object("optimal-cuts", final_solution_path)
+    #json.dump(final_solution_json, open(final_solution_path, "w"))
+    final_solution_object.put(Body=json.dumps(final_solution_json, indent=2))    
+
+    
+    final_solution_fitnesses_path = os.path.join(bucket_dirname, "iteration_fitnesses.json")
+    #json.dump(iteration_fitnesses, open(final_solution_fitnesses_path, "w"))
+    final_solution_fitnesses_object = s3.Object("optimal-cuts", final_solution_fitnesses_path)
+    final_solution_fitnesses_object.put(Body=json.dumps(iteration_fitnesses, indent=2))
         
 
     

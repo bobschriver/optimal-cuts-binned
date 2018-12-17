@@ -24,19 +24,23 @@ class Cuts():
             cut = Cut.from_json(cut_json)
             inactive_cuts.add(cut)
 
-        cuts = cls(inactive_cuts)
-        cuts.active_cuts = active_cuts
+        cuts = cls(active_cuts, inactive_cuts)
+        #cuts = cls(inactive_cuts)
+        #cuts.active_cuts = active_cuts
         
         cuts.value = cuts_json["fitness"]
 
         return cuts
 
-    def __init__(self, initial_cuts):
+    def __init__(self, active_cuts, inactive_cuts):
         self.value = 0
         self.component_name = "cuts"
 
-        self.inactive_cuts = initial_cuts
-        self.active_cuts = set()
+        #self.inactive_cuts = initial_cuts
+        #self.active_cuts = set()
+
+        self.active_cuts = active_cuts
+        self.inactive_cuts = inactive_cuts
         
         self.active_landing_points = []
 
@@ -49,7 +53,7 @@ class Cuts():
         self.forward_probabilities = [
            1.0,
            0.5,
-           0.001,
+           0.0001,
         ]
         
         self.reverse_map = {
@@ -57,18 +61,18 @@ class Cuts():
             self.remove_random_cut: self.add_cut
         }
 
-        self.max_iterations = 100000.0
+        self.max_iterations = 200000.0
 
         self.starting_forward_probabilities = [
             1.0,
             0.5,
-            0.001,
+            0.0001,
         ]
 
         self.ending_forward_probabilites = [
             1.0,
             0.5,
-            0.001,
+            0.0001,
         ]
 
     def step(self):
@@ -116,17 +120,6 @@ class Cuts():
         
         for cut in self.active_cuts:
             cut.update_landing_points(landing_point)
-
-
-    def copy_writable(self):
-        writable = Cuts(set())
-
-        writable.active_cuts = [cut.copy_writable() for cut in list(self.active_cuts)]
-        #writable.inactive_cuts = self.inactive_cuts.copy()
-
-        writable.active_landing_points = self.active_landing_points[:]
-
-        return writable
 
     def remove_orphaned_cuts(self):   
         cuts_to_remove = set()

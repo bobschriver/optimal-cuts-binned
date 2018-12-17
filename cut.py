@@ -213,7 +213,10 @@ class Cut():
             self.skidding_cost = self.harvest_weight * (self.closest_landing_point_distance * 0.061 + 20)
 
             self.felling_value = 2 * self.num_trees
-            self.harvest_value = self.harvest_weight * 71.65
+            
+            # TODO: HARVEST WEIGHT VALUE
+            self.harvest_value = self.harvest_weight * 49.60
+            #self.harvest_value = self.harvest_weight * 71.65
 
             self.value = (self.felling_value + self.harvest_value) - (self.equipment_moving_cost + self.felling_cost + self.processing_cost + self.skidding_cost)
 

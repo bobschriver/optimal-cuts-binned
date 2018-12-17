@@ -21,21 +21,23 @@ class Landings():
             landing = Landing.from_json(landing_json)
             inactive_landings.append(landing)
 
-        landings = cls(inactive_landings)
-        landings.active_landings = active_landings
+        landings = cls(active_landings, inactive_landings)
 
         Landings.value = landings_json["fitness"]
 
         return landings
 
-    def __init__(self, initial_landings):  
+    def __init__(self, active_landings, inactive_landings):  
         self.value = 0.0
         self.component_name = "landings"
 
-        self.active_landings = []    
-        self.inactive_landings = initial_landings
+        #self.active_landings = []    
+        #self.inactive_landings = initial_landings
 
-        self.active_landing_points = []
+        self.active_landings = active_landings
+        self.inactive_landings = inactive_landings
+
+        self.active_landing_points = [landing.point for landing in active_landings]
 
         self.active_change_callbacks = []
         self.inactive_change_callbacks = []
@@ -140,13 +142,6 @@ class Landings():
             self.value += landing.compute_value()
             
         return self.value
-    
-    def copy_writable(self):
-        writable = Landings(self.inactive_landings[:])
-
-        writable.active_landings = self.active_landings[:]
-        
-        return writable
     
     def export(self, output_dir):
         landings_output_dir = os.path.join(output_dir, "landings")
