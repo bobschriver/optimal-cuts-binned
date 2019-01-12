@@ -11,11 +11,7 @@ from cuts import Cuts
 from landing import Landing
 from landings import Landings
 
-from solution import Solution
-from heuristic import RecordToRecord, SimulatedAnnealing
-
-
-class Preprocessor:
+class PreProcessor():
     def __init__(self, status, progress_bar):
         self.status = status
         self.progress_bar = progress_bar
@@ -193,101 +189,3 @@ class Preprocessor:
             self.progress_bar.start()
             starting_cuts_json = json.load(open(tile_feasible_cuts_filename, "rb"))
             self.progress_bar.stop()
-
-        return initial_landings_json, starting_cuts_json
-
-class Solver():
-    def __init__(self, heuristic, status, progress_bar, current_value, best_value):
-        self.heuristic = heuristic
-        self.status = status
-        self.progress_bar = progress_bar
-
-        self.current_value = current_value
-        self.best_value = best_value
-            
-    def solve(self, solution, output_dirname):
-        iterations = 0
-
-        iteration_fitnesses = {}
-        iteration_fitnesses["current_value"] = {}
-        iteration_fitnesses["best_value"] = {}
-
-        self.progress_bar.start()
-        self.status.set("Solution Iteration {}".format(0))
-
-        while self.heuristic.continue_solving(iterations):
-            iterations += 1
-
-            solution.forward()
-
-            accept_solution = self.heuristic.accept_solution(solution)
-            if not accept_solution:
-                solution.reverse()
-            else:
-                self.heuristic.set_base_solution(solution)
-
-            
-            if iterations % 100 == 0:
-                self.status.set("Solution Iteration {}".format(iterations))
-                self.current_value.set(solution.compute_value())
-                self.best_value.set(self.heuristic.best_value)
-            
-            if iterations % 1000 == 0:
-                iteration_fitnesses["current_value"][iterations] = self.heuristic.base_value
-                iteration_fitnesses["best_value"][iterations] = self.heuristic.best_value
-            
-            """
-            if iterations % 10000 == 0:
-                current_solution_json = self.solution.to_json()
-                current_solution_path = os.path.join(bucket_dirname, "{}.json".format(int(current_solution_json["fitness"])))
-                current_solution_object = s3.Object("optimal-cuts", current_solution_path)
-                current_solution_object.put(Body=json.dumps(current_solution_json, indent=2))
-                #json.dump(current_solution_json, open(current_solution_path, "w"))
-                print("Wrote current solution to {}".format(current_solution_path))
-            """
-        self.progress_bar.stop()
-        return (self.heuristic.final_solution_json, iteration_fitnesses)
-
-
-class OptimalCuts:
-    def __init__(self, status, progress_bar, current_value, best_value):
-        self.status = status
-        self.progress_bar = progress_bar
-
-        self.current_value = current_value
-        self.best_value = best_value
-    
-    def find(self, trees_path, landings_path, output_dir, heuristic_type):
-        preprocessor = Preprocessor(self.status, self.progress_bar)
-        initial_landings_json, initial_cuts_json = preprocessor.preprocess(
-            trees_path, 
-            landings_path, 
-            output_dir)
-
-        landings = Landings.from_json(initial_landings_json)
-        cuts = Cuts.from_json(initial_cuts_json)
-
-        landings.active_change_callbacks.append(cuts.update_landing_points)
-
-        for i in range(40):
-            landings.add_random_landing()
-
-        initial_solution = Solution()
-        initial_solution.add_component(landings)
-        initial_solution.add_component(cuts)
-
-        if heuristic_type == "R2R":
-            heuristic = RecordToRecord()
-        elif heuristic_type == "SA":
-            heuristic = SimulatedAnnealing()
-            
-        heuristic.configure()
-
-        solver = Solver(heuristic, self.status, self.progress_bar, self.current_value, self.best_value)
-        final_solution_json, iteration_fitnesses = solver.solve(initial_solution, output_dir)
-
-        final_solution_path = os.path.join(output_dir, "final_solution.json")
-        json.dump(final_solution_json, open(final_solution_path, "w"), indent=2)
-        
-        final_solution_fitnesses_path = os.path.join(output_dir, "iteration_fitnesses.json")
-        json.dump(iteration_fitnesses, open(final_solution_fitnesses_path, "w"), indent=2)
