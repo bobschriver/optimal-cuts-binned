@@ -14,10 +14,8 @@ root.geometry("500x200")
 
 trees_path = tkinter.StringVar()
 landings_path = tkinter.StringVar()
+configuration_path = tkinter.StringVar()
 output_dir = tkinter.StringVar()
-
-optimizer = tkinter.StringVar()
-optimizer.set("SA")
 
 status = tkinter.StringVar()
 progress_bar = Progressbar(root, length=100, mode="indeterminate")
@@ -31,7 +29,7 @@ def start_optimization():
     status.set("Starting optimization")
     optimal_cuts_task = threading.Thread(
         target=optimal_cuts.find, 
-        args=(trees_path.get(), landings_path.get(), output_dir.get(), optimizer.get())
+        args=(trees_path.get(), landings_path.get(), configuration_path.get(), output_dir.get())
         )
     optimal_cuts_task.start()
 
@@ -56,11 +54,13 @@ start_button.grid(column=0, row=4, sticky="w")
 def set_enabled_state(*args):
     if (os.path.exists(trees_path.get()) and   
         os.path.exists(landings_path.get()) and
+        os.path.exists(configuration_path.get()) and
         os.path.exists(output_dir.get())):
         start_button.configure(state="normal")
 
 trees_path.trace("w", set_enabled_state)
-landings_path.trace("w", set_enabled_state)    
+landings_path.trace("w", set_enabled_state)  
+configuration_path.trace("w", set_enabled_state)  
 output_dir.trace("w", set_enabled_state)    
 
 tkinter.Label(root, text="Trees CSV file").grid(column=0, row=0, sticky="w")
@@ -92,10 +92,24 @@ def set_landings_file():
 landings_file_button = tkinter.Button(root, text="Choose File", command=set_landings_file)
 landings_file_button.grid(column=1, row=1, sticky="w")
 
+tkinter.Label(root, text="Configuration JSON file").grid(column=0, row=2, sticky="w")
+configuration_file_label = tkinter.Label(root, text="")
+configuration_file_label.grid(column=2, row=2, sticky="w")
+def set_configuration_file():
+    configuration_path.set(filedialog.askopenfilename(
+        title="Configuration Path",
+        filetypes=[("json files", "*.json")]
+    ))
 
-tkinter.Label(root, text="Output Directory").grid(column=0, row=2, sticky="w")
+    configuration_file_label.configure(text=os.path.basename(configuration_path.get()))
+
+configuration_file_button = tkinter.Button(root, text="Choose File", command=set_configuration_file)
+configuration_file_button.grid(column=1, row=2, sticky="w")
+
+
+tkinter.Label(root, text="Output Directory").grid(column=0, row=3, sticky="w")
 output_file_label = tkinter.Label(root, text="")
-output_file_label.grid(column=2, row=2)
+output_file_label.grid(column=2, row=3)
 def set_output_dir():
     output_dir.set(filedialog.askdirectory(
         title="Output Directory"
@@ -104,10 +118,7 @@ def set_output_dir():
     output_file_label.configure(text=os.path.basename(output_dir.get()))
 
 output_dir_button = tkinter.Button(root, text="Choose Directory", command=set_output_dir)
-output_dir_button.grid(column=1, row=2, sticky="w")
-
-tkinter.Radiobutton(root, text="Simulated Annealing", variable=optimizer, value="SA").grid(row=3, column=0)
-tkinter.Radiobutton(root, text="Record To Record", variable=optimizer, value="R2R").grid(row=3, column=1)
+output_dir_button.grid(column=1, row=3, sticky="w")
 
 current_value_label = tkinter.Label(root, text="")
 current_value_label.grid(row=6, column=0, sticky="w")

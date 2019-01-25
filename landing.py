@@ -8,11 +8,21 @@ class Landing():
 
         return landing
 
+    @classmethod
+    def configure(
+        cls,
+        clearing_cost=500
+    ):
+        cls.clearing_cost = clearing_cost
+
+    clearing_cost = 500
     def __init__(self, point):
         self.point = point
-        self.value = -500
-    
+        self.value = 0
+
     def compute_value(self):
+        self.value = 0 - Landing.clearing_cost
+
         return self.value
         
     def to_json(self):

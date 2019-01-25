@@ -31,9 +31,6 @@ class Landings():
         self.value = 0.0
         self.component_name = "landings"
 
-        #self.active_landings = []    
-        #self.inactive_landings = initial_landings
-
         self.active_landings = active_landings
         self.inactive_landings = inactive_landings
 
@@ -142,19 +139,6 @@ class Landings():
             self.value += landing.compute_value()
             
         return self.value
-    
-    def export(self, output_dir):
-        landings_output_dir = os.path.join(output_dir, "landings")
-        if not os.path.exists(landings_output_dir):
-            os.makedirs(landings_output_dir)
-        
-        landings_dict = {}
-        
-        landing_points = [landing.point for landing in self.active_landings]
-        landings_dict["landing_points"] = landing_points
-        
-        with open(os.path.join(landings_output_dir, "landings.json"), 'w') as fp:
-            json.dump(landings_dict, fp)
 
     def to_json(self):
         landings_json = {}

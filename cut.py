@@ -11,6 +11,16 @@ class ClosestLandingState(Enum):
     INACTIVE = 4 # Closest landing point is inactive
 
 class Cut():
+    #DEFINE STATIC VARIABLES HERE
+    #moving_cost_per_foot = 0.01
+    #felling_cost_per_non_harvested_tree = 12
+    #felling_cost_per_harvested_tree = 10
+    #processing_cost_per_harvested_tree = 15
+    #skidding_cost_per_foot = 0.061
+    #skidding_cost_per_tonne = 20
+    #felling_value_per_tree = 2
+    #harvest_value_per_tonne = 49.60
+
     @classmethod
     def from_json(cls, cut_json):
         top_left = cut_json["hull_points"][0]
@@ -35,6 +45,28 @@ class Cut():
             cut.orphaned = cut_json["orphaned"]
 
         return cut
+
+    @classmethod
+    def configure(
+        cls, 
+        moving_cost_per_foot=0.01,
+        felling_cost_per_non_harvested_tree=12,
+        felling_cost_per_harvested_tree=10,
+        processing_cost_per_harvested_tree=15,
+        skidding_cost_per_foot=0.061,
+        skidding_cost_per_tonne=20,
+        felling_value_per_tree=2,
+        harvest_value_per_tonne=49.60
+    ):
+        cls.moving_cost_per_foot = moving_cost_per_foot
+        cls.felling_cost_per_non_harvested_tree = felling_cost_per_non_harvested_tree
+        cls.felling_cost_per_harvested_tree = felling_cost_per_harvested_tree
+        cls.processing_cost_per_harvested_tree = processing_cost_per_harvested_tree
+        cls.skidding_cost_per_foot = skidding_cost_per_foot
+        cls.skidding_cost_per_tonne = skidding_cost_per_tonne
+        cls.felling_value_per_tree = felling_value_per_tree
+        cls.harvest_value_per_tonne = harvest_value_per_tonne
+
 
     def reset_state(self):
         self.update_cached = True
@@ -70,7 +102,8 @@ class Cut():
 
         self.x = (bottom_right[0] - top_left[0]) / 2.0 + top_left[0]
         self.y = (bottom_right[1] - top_left[1]) / 2.0 + top_left[1]
-        
+
+    """    
     def copy_writable(self):
         cut = Cut(self.top_left, self.bottom_right)
         cut.non_harvest_weight = self.non_harvest_weight
@@ -91,6 +124,7 @@ class Cut():
         cut.value = self.value
 
         return cut
+    """
 
     def to_json(self):
         cut_json = {}

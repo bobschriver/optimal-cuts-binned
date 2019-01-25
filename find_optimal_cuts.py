@@ -257,7 +257,47 @@ class OptimalCuts:
         self.current_value = current_value
         self.best_value = best_value
     
-    def find(self, trees_path, landings_path, output_dir, heuristic_type):
+    
+    def configure(self, configuration):
+        print(configuration)
+        if "cut" in configuration:
+            cut_configuration = configuration["cut"]
+            Cut.configure(**cut_configuration)
+            """
+            if "moving_cost_per_foot" in cut_configuration:
+                Cut.moving_cost_per_foot = cut_configuration["moving_cost_per_foot"]
+            
+            if "felling_cost_per_non_harvested_tree" in cut_configuration:
+                Cut.felling_cost_per_non_harvested_tree = cut_configuration["felling_cost_per_non_harvested_tree"]
+
+            if "felling_cost_per_harvested_tree" in cut_configuration:
+                Cut.felling_cost_per_harvested_tree = cut_configuration["felling_cost_per_harvested_tree"]
+    
+            if "processing_cost_per_harvested_tree" in cut_configuration:
+                Cut.processing_cost_per_harvested_tree = cut_configuration["processing_cost_per_harvested_tree"]
+
+            if "skidding_cost_per_foot" in cut_configuration:
+                Cut.skidding_cost_per_foot = cut_configuration["skidding_cost_per_foot"]
+
+            if "skidding_cost_per_tonne" in cut_configuration:
+                Cut.skidding_cost_per_tonne = cut_configuration["skidding_cost_per_tonne"]
+
+            if "felling_value_per_tree" in cut_configuration:
+                Cut.felling_value_per_tree = cut_configuration["felling_value_per_tree"]
+
+            if "harvest_value_per_tonne" in cut_configuration:
+                Cut.harvest_value_per_tonne = cut_configuration["harvest_value_per_tonne"]
+            """
+
+        if "landing" in configuration:
+            landing_configuration = configuration["landing"]
+            Landing.configure(**landing_configuration)
+    
+
+    def find(self, trees_path, landings_path, configuration_path, output_dir):
+        configuration = json.load(open(configuration_path, 'r'))
+        self.configure(configuration)
+
         preprocessor = Preprocessor(self.status, self.progress_bar)
         initial_landings_json, initial_cuts_json = preprocessor.preprocess(
             trees_path, 
@@ -276,12 +316,15 @@ class OptimalCuts:
         initial_solution.add_component(landings)
         initial_solution.add_component(cuts)
 
-        if heuristic_type == "R2R":
+        heuristic_configuration = configuration["heuristic"]
+        heuristic_type = heuristic_configuration["type"]
+
+        if heuristic_type == "RecordToRecord":
             heuristic = RecordToRecord()
-        elif heuristic_type == "SA":
+        elif heuristic_type == "SimulatedAnnealing":
             heuristic = SimulatedAnnealing()
             
-        heuristic.configure()
+        heuristic.configure(**heuristic_configuration["parameters"])
 
         solver = Solver(heuristic, self.status, self.progress_bar, self.current_value, self.best_value)
         final_solution_json, iteration_fitnesses = solver.solve(initial_solution, output_dir)

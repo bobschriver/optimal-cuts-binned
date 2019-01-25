@@ -1,0 +1,15 @@
+{
+    "landing": {
+        "clearing_cost": 400
+    },
+    "cut": {
+        "felling_cost_per_non_harvested_tree": 12,
+        "harvest_value_per_tonne": 71.65
+    },
+    "heuristic": {
+        "type": "SimulatedAnnealing",
+        "parameters": {
+            "min_temperature": 0.00003
+        }
+    }
+}

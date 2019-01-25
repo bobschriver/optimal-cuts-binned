@@ -25,8 +25,6 @@ class Cuts():
             inactive_cuts.add(cut)
 
         cuts = cls(active_cuts, inactive_cuts)
-        #cuts = cls(inactive_cuts)
-        #cuts.active_cuts = active_cuts
         
         cuts.value = cuts_json["fitness"]
 
@@ -35,9 +33,6 @@ class Cuts():
     def __init__(self, active_cuts, inactive_cuts):
         self.value = 0
         self.component_name = "cuts"
-
-        #self.inactive_cuts = initial_cuts
-        #self.active_cuts = set()
 
         self.active_cuts = active_cuts
         self.inactive_cuts = inactive_cuts
