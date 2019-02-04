@@ -11,15 +11,6 @@ class ClosestLandingState(Enum):
     INACTIVE = 4 # Closest landing point is inactive
 
 class Cut():
-    #DEFINE STATIC VARIABLES HERE
-    #moving_cost_per_foot = 0.01
-    #felling_cost_per_non_harvested_tree = 12
-    #felling_cost_per_harvested_tree = 10
-    #processing_cost_per_harvested_tree = 15
-    #skidding_cost_per_foot = 0.061
-    #skidding_cost_per_tonne = 20
-    #felling_value_per_tree = 2
-    #harvest_value_per_tonne = 49.60
 
     @classmethod
     def from_json(cls, cut_json):
@@ -50,18 +41,18 @@ class Cut():
     def configure(
         cls, 
         moving_cost_per_foot=0.01,
-        felling_cost_per_non_harvested_tree=12,
-        felling_cost_per_harvested_tree=10,
-        processing_cost_per_harvested_tree=15,
+        felling_cost_per_non_harvested_tonne=12,
+        felling_cost_per_harvested_tonne=10,
+        processing_cost_per_harvested_tonne=15,
         skidding_cost_per_foot=0.061,
         skidding_cost_per_tonne=20,
         felling_value_per_tree=2,
-        harvest_value_per_tonne=49.60
+        harvest_value_per_tonne=49.60 #71.65
     ):
         cls.moving_cost_per_foot = moving_cost_per_foot
-        cls.felling_cost_per_non_harvested_tree = felling_cost_per_non_harvested_tree
-        cls.felling_cost_per_harvested_tree = felling_cost_per_harvested_tree
-        cls.processing_cost_per_harvested_tree = processing_cost_per_harvested_tree
+        cls.felling_cost_per_non_harvested_tonne = felling_cost_per_non_harvested_tonne
+        cls.felling_cost_per_harvested_tonne = felling_cost_per_harvested_tonne
+        cls.processing_cost_per_harvested_tonne = processing_cost_per_harvested_tonne
         cls.skidding_cost_per_foot = skidding_cost_per_foot
         cls.skidding_cost_per_tonne = skidding_cost_per_tonne
         cls.felling_value_per_tree = felling_value_per_tree
@@ -103,28 +94,6 @@ class Cut():
         self.x = (bottom_right[0] - top_left[0]) / 2.0 + top_left[0]
         self.y = (bottom_right[1] - top_left[1]) / 2.0 + top_left[1]
 
-    """    
-    def copy_writable(self):
-        cut = Cut(self.top_left, self.bottom_right)
-        cut.non_harvest_weight = self.non_harvest_weight
-        cut.harvest_weight = self.harvest_weight
-        cut.num_trees = self.num_trees
-        cut.closest_landing_point = self.closest_landing_point
-        cut.closest_landing_point_distance = self.closest_landing_point_distance
-
-        cut.felling_value = self.felling_value
-        cut.harvest_value = self.harvest_value
-
-        cut.equipment_moving_cost = self.equipment_moving_cost
-        cut.felling_cost = self.felling_cost
-        cut.processing_cost = self.processing_cost
-        cut.skidding_cost = self.skidding_cost
-
-        cut.update_cached = True
-        cut.value = self.value
-
-        return cut
-    """
 
     def to_json(self):
         cut_json = {}
@@ -241,16 +210,13 @@ class Cut():
             return 0.0
             
         if self.update_cached: 
-            self.equipment_moving_cost = self.closest_landing_point_distance * 0.01
-            self.felling_cost = self.non_harvest_weight * 12 + self.harvest_weight * 10
-            self.processing_cost = self.harvest_weight * 15
-            self.skidding_cost = self.harvest_weight * (self.closest_landing_point_distance * 0.061 + 20)
+            self.equipment_moving_cost = self.closest_landing_point_distance * Cut.moving_cost_per_foot
+            self.felling_cost = self.non_harvest_weight * Cut.felling_cost_per_non_harvested_tonne + self.harvest_weight * Cut.felling_cost_per_harvested_tonne
+            self.processing_cost = self.harvest_weight * Cut.processing_cost_per_harvested_tonne
+            self.skidding_cost = self.harvest_weight * (self.closest_landing_point_distance * Cut.skidding_cost_per_foot + Cut.skidding_cost_per_tonne)
 
-            self.felling_value = 2 * self.num_trees
-            
-            # TODO: HARVEST WEIGHT VALUE
-            self.harvest_value = self.harvest_weight * 49.60
-            #self.harvest_value = self.harvest_weight * 71.65
+            self.felling_value = self.num_trees * Cut.felling_value_per_tree
+            self.harvest_value = self.harvest_weight * Cut.harvest_value_per_tonne
 
             self.value = (self.felling_value + self.harvest_value) - (self.equipment_moving_cost + self.felling_cost + self.processing_cost + self.skidding_cost)
 
